@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use WP_Post;
 
 #[CoversClass(MetaBoxRegistry::class)]
 final class MetaBoxRegistryTest extends TestCase
@@ -64,6 +65,29 @@ final class MetaBoxRegistryTest extends TestCase
                 $this->metaBoxMock->context(),
                 $this->metaBoxMock->priority()
             );
+
+        $this->registry->register($this->metaBoxMock, ['screen']);
+    }
+
+    #[Test]
+    public function shouldEchoRenderedMetaBox(): void
+    {
+        $output = 'output';
+
+        $this->expectOutputString($output);
+
+        $this->getFunctionMock(__NAMESPACE__, 'add_action')
+            ->expects($this->once())
+            ->with('add_meta_boxes', $this->isCallable())
+            ->willReturnCallback(static fn($hook, $callback) => $callback());
+        $this->getFunctionMock(__NAMESPACE__, 'add_meta_box')
+            ->expects($this->once())
+            ->willReturnCallback(
+                fn($id, $title, $callback) => $callback(
+                    $this->getMockBuilder(WP_Post::class)->disableOriginalConstructor()->getMock()
+                )
+            );
+        $this->metaBoxMock->method('render')->willReturn($output);
 
         $this->registry->register($this->metaBoxMock, ['screen']);
     }
